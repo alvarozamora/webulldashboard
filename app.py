@@ -22,6 +22,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
+import dash_table
 
 
 hurdle = 1  # 1 = 100%
@@ -164,14 +165,25 @@ class Portfolio:
     
         self.abovehurdle = []
         self.belowhurdle = []
+        self.abovehurdle2 = []
+        self.belowhurdle2 = []
         for key, value in self.AROICS.items():
             entry = f"{key} has an AROIC of {100*value:.2f}%."
             if value < hurdle:
+
                 self.belowhurdle.append(entry)
                 print(entry)
+
+                strike, ticker, _, _, date = key.split()
+                self.belowhurdle2.append([strike, ticker, date, f"{value:.2%}"])
             else:
                 self.abovehurdle.append(entry)
+                                
+                strike, ticker, _, _, date = key.split()
+                self.abovehurdle2.append([strike, ticker, date, f"{value:.2%}"])
 
+        self.abovehurdle2 = pd.DataFrame(data=self.abovehurdle2, columns=["Strike","Ticker","Date","AROIC"])
+        self.belowhurdle2 = pd.DataFrame(data=self.belowhurdle2, columns=["Strike","Ticker","Date","AROIC"])
         print("\n")
 
     def PieData(self):
@@ -382,21 +394,51 @@ def app_maker():
         # Puts Above/Below Hurdle
         ################################################################################
         dbc.Row([
-            html.Div([
-                html.H3(f'Puts above {hurdle:.2%} hurdle:'),
-                *[html.H6(entry) for entry in portfolio.abovehurdle]
-            ], className="six columns"),
+            
+            #html.Div([
+            #    html.H3(f'Puts above {hurdle:.2%} hurdle:'),
+            #    *[html.H6(entry) for entry in portfolio.abovehurdle]
+            #], className="six columns"),
 
+            #html.Div([
+            #    html.H3(f'Puts below {hurdle:.2%} hurdle:'),
+            #    *[html.H6(entry) for entry in portfolio.belowhurdle]
+            #], className="six columns"),
             html.Div([
+
+                html.H3(f'Puts above {hurdle:.2%} hurdle:'),
+
+                dash_table.DataTable(
+                    id='datatable-above',
+                    columns=[
+                        {"name": i, "id": i} for i in portfolio.abovehurdle2.columns #sorted(df.columns)
+                    ],
+                    data=portfolio.abovehurdle2.to_dict('records'),
+                    sort_action='native'
+                ),
+            ]),
+            html.Div([
+
+
+
                 html.H3(f'Puts below {hurdle:.2%} hurdle:'),
-                *[html.H6(entry) for entry in portfolio.belowhurdle]
-            ], className="six columns"),
+
+                dash_table.DataTable(
+                    id='datatable-below',
+                    columns=[
+                        {"name": i, "id": i} for i in portfolio.belowhurdle2.columns #sorted(df.columns)
+                    ],
+                    data=portfolio.belowhurdle2.to_dict('records'),
+                    sort_action='native'
+                )
+            ])
         ])
         ################################################################################
 
         #html.Div([dcc.Graph(figure=fig), dcc.Graph(figure=fig)])
         ])
 
+    
     # bit of CSS required for multi-column
     app.css.append_css({
     'external_url': 'https://codepen.io/chriddyp/pen/bWLwgP.css'
