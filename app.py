@@ -21,7 +21,10 @@ import plotly.graph_objects as go
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_bootstrap_components as dbc
 
+
+hurdle = 1  # 1 = 100%
 
 class Portfolio:
 
@@ -42,12 +45,14 @@ class Portfolio:
         # Calculate portfolio greeks
         self.Theta()
 
+        # Compute pie data
+        self.PieData()
+
         # AROIC routines
         self.calculate_AROICS()
         self.findlow_AROICS()
 
-        # Compute pie data
-        self.PieData()
+
 
 
     def sort(self):
@@ -58,6 +63,7 @@ class Portfolio:
         for position in self.positions:
             if position['assetType'] == 'OPTION':
                 position['accounted'] = 0
+                position['vertical'] = 0
                 self.options.append(position)
             elif position['assetType'] == 'stock':
                 self.stocks.append(position)
@@ -119,6 +125,10 @@ class Portfolio:
         self.AROICS = {}
         for option in self.options:
 
+            if option['accounted'] == option['vertical']:
+                continue
+                print('wrong one')
+
             # Get actual option data (option position --> option data)
             cost = float(option['costPrice'])
             qty = float(option['position'])
@@ -147,14 +157,20 @@ class Portfolio:
 
             AROIC = (1 + NIV/col)**(365/DTE)-1
 
-            key = f"${strike} {ticker}  {option['direction']} for {expry.date()}"
+            key = f"${strike} {ticker} {option['direction']} for {expry.date()}"
             self.AROICS[key] = AROIC
 
     def findlow_AROICS(self):
-
+    
+        self.abovehurdle = []
+        self.belowhurdle = []
         for key, value in self.AROICS.items():
-            if value < 1:
-                print(f"{key} has an AROIC of {100*value:.2f}%.")
+            entry = f"{key} has an AROIC of {100*value:.2f}%."
+            if value < hurdle:
+                self.belowhurdle.append(entry)
+                print(entry)
+            else:
+                self.abovehurdle.append(entry)
 
         print("\n")
 
@@ -191,6 +207,7 @@ class Portfolio:
                 # Account for long
                 self.pie_data[ticker].options += float(self.options[q]['marketValue'])
                 self.options[q]['accounted'] += qty
+                self.options[q]['vertical'] += qty
                 other = 0
                 
                 # Check for vertical
@@ -210,6 +227,7 @@ class Portfolio:
                                 print(f"{ticker} vertical detected")
                                 qty_accted = np.min([qty, -qty2-self.options[p]['accounted']])
                                 self.options[p]['accounted'] += qty_accted
+                                self.options[p]['vertical'] += qty_accted
                                 print(f"Before = ${self.pie_data[ticker].options:.2f}")
                                 self.pie_data[ticker].options += float(self.options[p]['lastPrice'])*(-qty_accted)*option2['quoteLotSize']
                                 print(f"After = ${self.pie_data[ticker].options:.2f}")
@@ -297,7 +315,6 @@ def app_maker():
             if i == 0:
                 maint += slice.total
                 totals.append(slice.total)
-                pass
                 #entries.append((ticker, 'Total', slice.total))
             # Stock
             elif i == 1:
@@ -359,12 +376,31 @@ def app_maker():
         html.H4(f"Total Portfolio Theta ${portfolio.theta:.2f}", style={'textAlign': 'center'}),
         html.Div(children=[
         dcc.Graph(figure=theta_fig), #, style={'display': 'inline-block'}),
+        ]),
+        ################################################################################
+
+        # Puts Above/Below Hurdle
+        ################################################################################
+        dbc.Row([
+            html.Div([
+                html.H3(f'Puts above {hurdle:.2%} hurdle:'),
+                *[html.H6(entry) for entry in portfolio.abovehurdle]
+            ], className="six columns"),
+
+            html.Div([
+                html.H3(f'Puts below {hurdle:.2%} hurdle:'),
+                *[html.H6(entry) for entry in portfolio.belowhurdle]
+            ], className="six columns"),
         ])
         ################################################################################
 
-
         #html.Div([dcc.Graph(figure=fig), dcc.Graph(figure=fig)])
         ])
+
+    # bit of CSS required for multi-column
+    app.css.append_css({
+    'external_url': 'https://codepen.io/chriddyp/pen/bWLwgP.css'
+    })
 
     return app
 
