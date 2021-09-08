@@ -12,3 +12,4 @@ HoloViews
 pandas
 plotly
 dash
+webbrowser

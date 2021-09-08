@@ -23,9 +23,15 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
 import dash_table
+import webbrowser
+from threading import Timer
 
 
 hurdle = 1  # 1 = 100%
+
+port = 5000
+def open_browser():
+	webbrowser.open_new(f"http://localhost:{port}")
 
 class Portfolio:
 
@@ -444,6 +450,7 @@ def app_maker():
     'external_url': 'https://codepen.io/chriddyp/pen/bWLwgP.css'
     })
 
+    Timer(2, open_browser).start()
     return app
 
 
@@ -451,5 +458,5 @@ if __name__ == '__main__':
 
     app = app_maker()
 
-    app.run_server(debug=False, use_reloader=False) 
+    app.run_server(debug=False, use_reloader=False, port=port) 
 
