@@ -224,10 +224,9 @@ class Portfolio:
 
                 # Account for long
                 self.pie_data[ticker].options += float(self.options[q]['marketValue'])
-                self.options[q]['accounted'] += qty
-                self.options[q]['vertical'] += qty
-                other = 0
-                
+                unaccounted = qty - self.options[q]['accounted'] 
+                self.options[q]['accounted'] += unaccounted
+
                 # Check for vertical
                 expiry = self.option_data[ticker][brokerId]['expireDate']
                 for p in range(len(self.options)):
@@ -245,12 +244,26 @@ class Portfolio:
                                 print(f"{ticker} vertical detected")
                                 qty_accted = np.min([qty, -qty2-self.options[p]['accounted']])
                                 self.options[p]['accounted'] += qty_accted
+                                self.options[q]['vertical'] += qty_accted
                                 self.options[p]['vertical'] += qty_accted
-                                print(f"Before = ${self.pie_data[ticker].options:.2f}")
-                                self.pie_data[ticker].options += float(self.options[p]['lastPrice'])*(-qty_accted)*option2['quoteLotSize']
-                                print(f"After = ${self.pie_data[ticker].options:.2f}")
 
+                                # check if short vertical, add collateral if so:
+                                lower_strike = np.argmin([self.option_data[ticker][brokerId]['strikePrice'], self.option_data[ticker][brokerId2]['strikePrice']])
+                                if (direction == 'put' and int([self.options[q]['position'], self.options[p]['position']][lower_strike]) > 0) or (direction == 'call' and int([self.options[q]['position'], self.options[p]['position']][lower_strike]) < 0):
+
+                                    
+                                    dS = np.abs(float(self.option_data[ticker][brokerId]['strikePrice'])- float(self.option_data[ticker][brokerId2]['strikePrice']))
+                                    collateral = float(option2['quoteLotSize'])*dS*qty_accted
+                                    print(f"{ticker} short vertical detected. collateral = ${collateral:.2f}")
+                                    self.pie_data[ticker].collateral += option2['quoteLotSize']*dS*qty_accted + float(self.options[p]['lastPrice'])*(-qty_accted)*option2['quoteLotSize'] - float(self.options[q]['lastPrice'])*(-qty_accted)*option2['quoteLotSize']
+                                    self.pie_data[ticker].options -= float(self.options[q]['marketValue'])
+
+                                else:
+                                    print(f"Before = ${self.pie_data[ticker].options:.2f}")
+                                    self.pie_data[ticker].options += float(self.options[p]['lastPrice'])*(-qty_accted)*option2['quoteLotSize']
+                                    print(f"After = ${self.pie_data[ticker].options:.2f}")
                                 break
+
 
         # Put collateral
         for q in range(len(self.options)):
