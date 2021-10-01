@@ -307,7 +307,8 @@ def app_maker():
 
     # Log into webull
     wb = webull()
-    wb.login(wbp.WEBULLNAME, wbp.WEBULLPASS, wbp.nickname, wbp.SECURITYCODE, wbp.questionId, wbp.questionAnswer)
+    print(wb.login(wbp.WEBULLNAME, wbp.WEBULLPASS, wbp.nickname, wbp.SECURITYCODE, wbp.questionId, wbp.questionAnswer))
+    #import pdb; pdb.set_trace()
     try:
         if not wb.get_account()['success']:
             print("Login Unsuccessful. Check your password.")
@@ -315,7 +316,7 @@ def app_maker():
             print("Sending a new 6 digit security code to your email -- update code in wbp.py")
             wb.get_mfa(wbp.WEBULLNAME)
 
-            print("Make sure your questionId and answer are correct (if DOB, should be in format 'MM/DD')")
+            print("Make sure your questionId and answer are correct (if DOB, should be in format 'MMDD')")
             print(wb.get_security(wbp.WEBULLNAME))
             
             raise Exception("Unsuccessful Login. Follow steps above and try again.")
